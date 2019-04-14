@@ -39,24 +39,24 @@ static int    run = 5;		// average run length of consecutive failures
 //----------------------------------------------------------------------------
 
 void inject_random_failure() {
-	thread_local std::random_device rd;
+    thread_local std::random_device rd;
     thread_local std::mt19937 mt(rd());
     thread_local std::uniform_real_distribution<double> dist(0., 100.);
-	thread_local int run_in_progress = 0;
+    thread_local int run_in_progress = 0;
 
-	auto trigger_a_new_run = [&]{ return dist(mt) < (pct/run); };
+    auto trigger_a_new_run = [&]{ return dist(mt) < (pct/run); };
 
-	assert(run_in_progress >= 0);
+    assert(run_in_progress >= 0);
 
-	if (run_in_progress == 0 && trigger_a_new_run()) {
-		run_in_progress = int(run * dist(mt) / 50.);
-		assert(0 <= run_in_progress && run_in_progress <= 2*run);
-	}
+    if (run_in_progress == 0 && trigger_a_new_run()) {
+        run_in_progress = int(run * dist(mt) / 50.);
+        assert(0 <= run_in_progress && run_in_progress <= 2*run);
+    }
 
     if (run_in_progress > 0) {
-		--run_in_progress;
-		throw std::bad_alloc();
-	}
+        --run_in_progress;
+        throw std::bad_alloc();
+    }
 }
 
 
@@ -73,8 +73,8 @@ void inject_random_failure() {
 //----------------------------------------------------------------------------
 
 void init(double pct, int run) {
-	babb::pct = pct;
-	babb::run = run;
+    babb::pct = pct;
+    babb::run = run;
 }
 
 }
