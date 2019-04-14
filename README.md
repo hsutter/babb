@@ -27,5 +27,6 @@ In practice, what we frequently discover is that if we audit such code we discov
 
 2. It requires careful handling: It cannot be assumed to be recoverable by running ordinary code, including to perform stack unwinding and call-site error handling, because ordinary code frequently tries to allocate memory. Instead, OOM-hardened code must be written carefully to observe restrictions and special idioms.
 
+**We would appreciate you running this against your project and reporting the results via this SurveyMonkey survey [TODO: link].**
 
 Thank you very much for your help in getting data to inform C++ standardization!
