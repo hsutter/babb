@@ -10,11 +10,11 @@ This library provides a simple way to inject random `bad_alloc` failures into yo
 
 2. If your project doesn't already replace global `operator new`, then add `babb_globals.cpp` to your project, which contains replacements for the throwing global `new` functions that add  the above injection calls.
 
-3. Optionally, insert a single call to `babb::init(pct, run)` in your `main` function to control the frequency and clustering of failure injection. We suggest trying various values for these options.
+3. Optionally, insert a single call to `babb::shared::init(per, run)` in your `main` function to control the frequency and clustering of failure injection. We suggest trying various values for these options.
 
-    - `pct`: the average percentage of allocation attempts that will fail, from `0.0` to `100.0` (default: `0.01`)
+    - `fail_once_per`: the average #allocation attempts before one fails (default: 100,000)
 
-    - `run`: the average run length of consecutive failures to simulate a cluster of failures in low-memory conditions, where the failures after the first in each cluster will be likely to get injected into the unwinding/handling code paths (default: `5`)
+    - `max_run_length`: the maximum # consecutive failures in a clusert (default: 5)
 
 
 ## Motivation

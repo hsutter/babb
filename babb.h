@@ -21,11 +21,34 @@
 
 #include <memory>
 #include <random>
+#include <cassert>
 
 namespace babb {
 
-static double pct = 0.01;	// the average percentage of allocations to  fail
-static int    run = 5;		// average run length of consecutive failures
+struct shared {
+    inline static int fail_once_per  = 100000;	// avg #allocations between failures
+    inline static int max_run_length = 5;	    // max #consecutive failures
+
+    static auto invariant() { return fail_once_per > 0 && max_run_length >= 1; }
+
+    //----------------------------------------------------------------------------
+    //
+    //	init: Initialize the failure injection frequency and distribution
+    //
+    //	Optionally put one call to this in your main().
+    //  If you don't, the default is as if init(100000, 5).
+    //
+    //  fail_once_per:  avg #allocations between failures
+    //  max_run_length: max #consecutive failures (once we have triggered a new one)
+    //
+    //----------------------------------------------------------------------------
+
+    void init(int fail_once_per, int max_run_length) {
+        babb::shared::fail_once_per = fail_once_per;
+        babb::shared::max_run_length = max_run_length;
+        assert(invariant());
+    }
+};
 
 
 //----------------------------------------------------------------------------
@@ -44,13 +67,16 @@ void inject_random_failure() {
     thread_local std::uniform_real_distribution<double> dist(0., 100.);
     thread_local int run_in_progress = 0;
 
-    auto trigger_a_new_run = [&]{ return dist(mt) < (pct/run); };
+    auto trigger_a_new_run =
+        [&]{ return dist(mt) < 1./shared::fail_once_per/shared::max_run_length; };
 
-    assert(run_in_progress >= 0);
+    auto invariant = 
+        [&]{ return 0 <= run_in_progress && run_in_progress <= shared::max_run_length; };
+    assert(invariant() && shared::invariant());
 
     if (run_in_progress == 0 && trigger_a_new_run()) {
-        run_in_progress = int(run * dist(mt) / 50.);
-        assert(0 <= run_in_progress && run_in_progress <= 2*run);
+        run_in_progress = 1 + (dist(mt)/100)*(shared::max_run_length-1);
+        assert(invariant() && run_in_progress > 0);
     }
 
     if (run_in_progress > 0) {
@@ -59,23 +85,6 @@ void inject_random_failure() {
     }
 }
 
-
-//----------------------------------------------------------------------------
-//
-//	init(pct, run)
-//
-//	Optionally put a call to this in your main(). If you don't, the default
-//  is as if init(0.01, 5).
-//
-//  pct: average % of allocations that will fail (default: 0.01)
-//  run: average # of consecutive failures in a cluster (default: 5)
-//
-//----------------------------------------------------------------------------
-
-void init(double pct, int run) {
-    babb::pct = pct;
-    babb::run = run;
-}
 
 }
 
