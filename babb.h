@@ -78,6 +78,8 @@ class this_thread_ {
     auto invariant() { return once_per > 0 && run_length > 0; }
 
 public:
+    this_thread_() : mt(rd()), dist(0., 1.) { assert(invariant()); }
+
     //----------------------------------------------------------------------------
     //
     //	set_failure_profile: Change this thread's failure injection profile
@@ -95,6 +97,7 @@ public:
         assert(invariant());
     }
 
+
     //----------------------------------------------------------------------------
     //
     //	pause: Pause or unpause fault injection on this thread.
@@ -111,41 +114,32 @@ public:
     }
 
 
-    this_thread_() : mt(rd()), dist(0., 1.) { assert(invariant()); }
+    //----------------------------------------------------------------------------
+    //
+    //	inject_random_failure()
+    //
+    //  Put a call to this function inside each of your custom allocation functions
+    //  that could throw bad_alloc, including in any replacement operator new and
+    //  in any custom allocator's ::allocate function you are using that can fail.
+    //
+    //----------------------------------------------------------------------------
 
-    auto fail_now() { 
+    void inject_random_failure() {
         assert(invariant());
 
-        if (paused) return false;
+        if (paused) return;
 
         auto trigger_a_new_run =
             [&]{ return dist(mt) < 1./once_per/(run_length/2.); };
 
         if (run_in_progress == 0 && trigger_a_new_run()) {
-            run_in_progress = 1 + dist(mt)*(run_length-1);
+            run_in_progress = 1 + int(dist(mt)*(run_length-1));
             assert(invariant() && run_in_progress > 0);
         }
 
-        if (run_in_progress > 0) { --run_in_progress; return true; } 
-        return false;
-    }
-};
-thread_local this_thread_ this_thread;
-
-
-//----------------------------------------------------------------------------
-//
-//	inject_random_failure()
-//
-//  Put a call to this function inside each of your custom allocation functions
-//  that could throw bad_alloc, including in any replacement operator new and
-//  in any custom allocator's ::allocate function you are using that can fail.
-//
-//----------------------------------------------------------------------------
-
-void inject_random_failure() {
-    if (this_thread.fail_now()) {
-        throw std::bad_alloc();
+        if (run_in_progress > 0) { 
+            --run_in_progress; 
+            throw std::bad_alloc();
         // NOTE: We don't have to take care here to ensure that this doesn't allocate
         // normal memory, because the implementation is already required to be robust
         // so that "throw bad_alloc()" works in low-memory situations. Typically that
@@ -153,9 +147,10 @@ void inject_random_failure() {
         // memory; otherwise, if "new int" fails an ordinary "new bad_alloc" to throw
         // the exception will also immediately fail. So it's up to implementations to
         // make this line work, and if they don't then that's useful data too.
+        }
     }
-}
-
+};
+thread_local this_thread_ this_thread;
 
 }
 

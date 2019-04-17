@@ -6,7 +6,7 @@ This library provides a simple way to inject random `bad_alloc` failures into yo
 
 ## How to use this library to test your application
 
-1. Insert a call to `babb::inject_random_failure()` inside each of your custom allocation functions that are allowed to fail by throwing `bad_alloc`, including in any such replacement `operator new` and in any custom allocator's `::allocate` function you are using that can fail.
+1. Insert a call to `babb::this_thread.inject_random_failure()` inside each of your custom allocation functions that are allowed to fail by throwing `bad_alloc`, including in any such replacement `operator new` and in any custom allocator's `::allocate` function you are using that can fail.
 
 2. If your project doesn't already replace global `operator new`, then add `babb_globals.cpp` to your project, which contains replacements for the throwing global `new` functions that add  the above injection calls.
 

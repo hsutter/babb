@@ -20,8 +20,8 @@
 //----------------------------------------------------------------------------
 //
 //  If you don't already replace global operator new, then include this file
-//  in your project. It will put calls to inject_random_failure into
-//  all of the standard operator new functions for you.
+//  in your project. It will put calls to this_thread.inject_random_failure()
+//  into all of the standard operator new functions for you.
 //
 //----------------------------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace op_new_detail {
 
 void* operator new(std::size_t size)
 {
-	if (babb::this_thread.fail_now()) op_new_detail::throw_bad_alloc();
+    babb::this_thread.inject_random_failure();
     if (size == 0) size = 1;
 
     void* p;
@@ -126,7 +126,7 @@ void operator delete[] (void* ptr, size_t) noexcept
 
 void* operator new(std::size_t size, std::align_val_t alignment)
 {
-	if (babb::this_thread.fail_now()) op_new_detail::throw_bad_alloc();
+    babb::this_thread.inject_random_failure();
     if (size == 0) size = 1;
     if (static_cast<size_t>(alignment) < sizeof(void*))
       alignment = std::align_val_t(sizeof(void*));
@@ -205,11 +205,17 @@ void operator delete[] (void* ptr, size_t, std::align_val_t alignment) noexcept
 #include <iostream>
 
 int main () {
-    babb::shared.set_failure_profile(10, 10);
-	for (int i = 0; i < 200; ++i) {
+	const int N = 1000;
+	int total = 0;
+
+	babb::this_thread.set_failure_profile(10, 10);
+
+	for (int i = 0; i < N; ++i) {
 		try { (void) new int; std::cout << '.'; }
-		catch (const std::bad_alloc &) { std::cout << '!'; }
-        catch (...) { assert(!"other exception was thrown"); }
+		catch (const std::bad_alloc &) { std::cout << '!'; ++total; }
+		catch (...) { assert(!"other exception was thrown"); }
 	}
+
 	std::cout << std::endl;
+	std::cout << total << " failures in " << N << " requests (avg. 1 in " << N / total << ")\n";
 }
