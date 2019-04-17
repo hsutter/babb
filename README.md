@@ -18,9 +18,9 @@ This library provides a simple way to inject random `bad_alloc` failures into yo
 
 Advanced per-thread options:
 
-    - Each thread's failure frequency can be changed at any time by calling `babb::per_thread.set_failure_profile(fail_once_per, max_run_length)`.
+   - Each thread's failure frequency can be changed at any time by calling `babb::per_thread.set_failure_profile(fail_once_per, max_run_length)`.
 
-    - To pause or resume failures on this thread, call `babb::per_thread.pause(true)` to pause, `(false)` to resume. This can be useful to work around calls to OOM-unsafe functions in third-party libraries (though if those are failing that's data too).
+   - To pause or resume failures on this thread, call `babb::per_thread.pause(true)` to pause, `(false)` to resume. This can be useful to work around calls to OOM-unsafe functions in third-party libraries (though if those are failing that's data too).
 
 ## Motivation
 
