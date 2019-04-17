@@ -25,15 +25,24 @@
 
 namespace babb {
 
-struct shared {
-    inline static int fail_once_per  = 100000;	// avg #allocations between failures
-    inline static int max_run_length = 5;	    // max #consecutive failures
+//----------------------------------------------------------------------------
+//  Global state
+//----------------------------------------------------------------------------
 
-    static auto invariant() { return fail_once_per > 0 && max_run_length >= 1; }
+class {
+    int once_per  = 100000; 	// avg #allocations between failures
+    int run_length = 5;	        // max #consecutive failures
+
+    auto invariant() 
+        { return once_per > 0 && run_length >= 1; }
+
+public:
+    auto fail_once_per()  { return once_per;   }
+    auto max_run_length() { return run_length; }
 
     //----------------------------------------------------------------------------
     //
-    //	init: Initialize the failure injection frequency and distribution
+    //	set_failure_profile: Set a default failure injection profile
     //
     //	Optionally put one call to this in your main().
     //  If you don't, the default is as if init(100000, 5).
@@ -43,12 +52,83 @@ struct shared {
     //
     //----------------------------------------------------------------------------
 
-    void init(int fail_once_per, int max_run_length) {
-        babb::shared::fail_once_per = fail_once_per;
-        babb::shared::max_run_length = max_run_length;
+    void set_failure_profile(int fail_once_per, int max_run_length) {
+        once_per = fail_once_per;
+        run_length = max_run_length;
         assert(invariant());
     }
-};
+} shared;
+
+
+//----------------------------------------------------------------------------
+//  Per-thread state
+//----------------------------------------------------------------------------
+
+thread_local class this_thread_ {   
+    std::random_device rd;
+    std::mt19937_64 mt;
+    std::uniform_real_distribution<double> dist;
+    int run_in_progress = 0;
+
+    int once_per  = shared.fail_once_per(); 	// avg #allocations between failures
+    int run_length = shared.max_run_length();   // max #consecutive failures
+    bool paused = false;
+
+    auto invariant() { return once_per > 0 && run_length >= 1; }
+
+public:
+    //----------------------------------------------------------------------------
+    //
+    //	set_failure_profile: Change this thread's failure injection profile
+    //
+    //	The default is to use the default frequency.
+    //
+    //  fail_once_per:  avg #allocations between failures
+    //  max_run_length: max #consecutive failures (once we have triggered a new one)
+    //
+    //----------------------------------------------------------------------------
+
+    void set_failure_profile(int fail_once_per, int max_run_length) {
+        once_per = fail_once_per;
+        run_length = max_run_length;
+        assert(invariant());
+    }
+
+    //----------------------------------------------------------------------------
+    //
+    //	pause: Pause or unpause fault injection on this thread.
+    //
+    //	This can be useful to work around calls to OOM-unsafe functions in
+    //  third-party libraries (though if those are failing that's data too).
+    //
+    //  paused:  true to pause, false to resume
+    //
+    //----------------------------------------------------------------------------
+
+    void pause(bool paused) {
+        this->paused = paused;
+    }
+
+
+    this_thread_() : mt(rd()), dist(0., 1.) { assert(invariant()); }
+
+    auto fail_now() { 
+        assert(invariant());
+
+        if (paused) return false;
+
+        auto trigger_a_new_run =
+            [&]{ return dist(mt) < 1./once_per/(run_length/2.); };
+
+        if (run_in_progress == 0 && trigger_a_new_run()) {
+            run_in_progress = 1 + (dist(mt)/100.)*(run_length-1);
+            assert(invariant() && run_in_progress > 0);
+        }
+
+        if (run_in_progress > 0) { --run_in_progress; return true; } 
+        return false;
+    }
+} this_thread;
 
 
 //----------------------------------------------------------------------------
@@ -62,26 +142,15 @@ struct shared {
 //----------------------------------------------------------------------------
 
 void inject_random_failure() {
-    thread_local std::random_device rd;
-    thread_local std::mt19937 mt(rd());
-    thread_local std::uniform_real_distribution<double> dist(0., 100.);
-    thread_local int run_in_progress = 0;
-
-    auto trigger_a_new_run =
-        [&]{ return dist(mt) < 1./shared::fail_once_per/shared::max_run_length; };
-
-    auto invariant = 
-        [&]{ return 0 <= run_in_progress && run_in_progress <= shared::max_run_length; };
-    assert(invariant() && shared::invariant());
-
-    if (run_in_progress == 0 && trigger_a_new_run()) {
-        run_in_progress = 1 + (dist(mt)/100)*(shared::max_run_length-1);
-        assert(invariant() && run_in_progress > 0);
-    }
-
-    if (run_in_progress > 0) {
-        --run_in_progress;
+    if (this_thread.fail_now()) {
         throw std::bad_alloc();
+        // NOTE: We don't have to take care here to ensure that this doesn't allocate
+        // normal memory, because the implementation is already required to be robust
+        // so that "throw bad_alloc()" works in low-memory situations. Typically that
+        // means bad_alloc objects must live in dedicated private "emergency reserve"
+        // memory; otherwise, if "new int" fails an ordinary "new bad_alloc" to throw
+        // the exception will also immediately fail. So it's up to implementations to
+        // make this line work, and if they don't then that's useful data too.
     }
 }
 

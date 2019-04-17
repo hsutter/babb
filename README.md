@@ -10,12 +10,17 @@ This library provides a simple way to inject random `bad_alloc` failures into yo
 
 2. If your project doesn't already replace global `operator new`, then add `babb_globals.cpp` to your project, which contains replacements for the throwing global `new` functions that add  the above injection calls.
 
-3. Optionally, insert a single call to `babb::shared::init(per, run)` in your `main` function to control the frequency and clustering of failure injection. We suggest trying various values for these options.
+3. Optionally, insert a single call to `babb::shared.set_failure_profile(fail_once_per, max_run_length)` in your `main` function to control the frequency and clustering of failure injection. We suggest trying various values for these options.
 
     - `fail_once_per`: the average #allocation attempts before one fails (default: 100,000)
 
-    - `max_run_length`: the maximum # consecutive failures in a clusert (default: 5)
+    - `max_run_length`: the maximum # consecutive failures in a cluster (default: 5)
 
+Advanced per-thread options:
+
+    - Each thread's failure frequency can be changed at any time by calling `babb::per_thread.set_failure_profile(fail_once_per, max_run_length)`.
+
+    - To pause or resume failures on this thread, call `babb::per_thread.pause(true)` to pause, `(false)` to resume. This can be useful to work around calls to OOM-unsafe functions in third-party libraries (though if those are failing that's data too).
 
 ## Motivation
 
