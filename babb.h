@@ -22,6 +22,7 @@
 #include <memory>
 #include <random>
 #include <cassert>
+#include <iostream>
 
 namespace babb {
 
@@ -30,7 +31,7 @@ namespace babb {
 //----------------------------------------------------------------------------
 
 class {
-    int once_per  = 100000; 	// avg #allocations between failures
+    int once_per  = 10;      	// avg #allocations between failures
     int run_length = 5;	        // max #consecutive failures
 
     auto invariant() 
@@ -64,7 +65,7 @@ public:
 //  Per-thread state
 //----------------------------------------------------------------------------
 
-thread_local class this_thread_ {   
+class this_thread_ {   
     std::random_device rd;
     std::mt19937_64 mt;
     std::uniform_real_distribution<double> dist;
@@ -74,7 +75,7 @@ thread_local class this_thread_ {
     int run_length = shared.max_run_length();   // max #consecutive failures
     bool paused = false;
 
-    auto invariant() { return once_per > 0 && run_length >= 1; }
+    auto invariant() { return once_per > 0 && run_length > 0; }
 
 public:
     //----------------------------------------------------------------------------
@@ -121,14 +122,15 @@ public:
             [&]{ return dist(mt) < 1./once_per/(run_length/2.); };
 
         if (run_in_progress == 0 && trigger_a_new_run()) {
-            run_in_progress = 1 + (dist(mt)/100.)*(run_length-1);
+            run_in_progress = 1 + dist(mt)*(run_length-1);
             assert(invariant() && run_in_progress > 0);
         }
 
         if (run_in_progress > 0) { --run_in_progress; return true; } 
         return false;
     }
-} this_thread;
+};
+thread_local this_thread_ this_thread;
 
 
 //----------------------------------------------------------------------------
