@@ -22,7 +22,7 @@ This project exists to help validate or invalidate this hypothesis, and we appre
 
 1. Insert a call to `babb::this_thread.inject_random_failure()` inside each of your custom allocation functions that are allowed to fail by throwing `bad_alloc`, including in any such replacement `operator new` and in any custom allocator's `::allocate` function you are using that can fail.
 
-2. If your project doesn't already replace global `operator new`, then add `babb_globals.cpp` to your project, which contains replacements for the throwing global `new` functions that add  the above injection calls.
+2. If your project doesn't already replace global `operator new`, then add `new_replacements.cpp` to your project, which contains replacements for the throwing global `new` functions that add  the above injection calls.
 
 3. Optionally, insert a single call to `babb::shared.set_failure_profile(fail_once_per, max_run_length)` in your `main` function to control the frequency and clustering of failure injection. We suggest trying various values for these options.
 
@@ -32,7 +32,7 @@ This project exists to help validate or invalidate this hypothesis, and we appre
 
 Advanced per-thread options:
 
-   - Each thread's failure frequency can be changed at any time by calling `babb::per_thread.set_failure_profile(fail_once_per, max_run_length)`.
+   - Each thread's failure frequency defaults to the `shared` values whenever the thread's `thread_local` storage is created, and can be changed at any time by calling `babb::this_thread.set_failure_profile(fail_once_per, max_run_length)` in the target thread.
 
-   - To pause or resume failures on this thread, call `babb::per_thread.pause(true)` to pause, `(false)` to resume. This can be useful to work around calls to OOM-unsafe functions in third-party libraries (though if those are failing that's data too).
+   - To pause or resume failures on this thread, call `babb::this_thread.pause(true)` to pause, `(false)` to resume. This can be useful to work around calls to OOM-unsafe functions in third-party libraries (though if those are failing that's data too).
 
