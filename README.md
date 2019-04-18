@@ -9,11 +9,11 @@ This library provides a simple way to inject random `bad_alloc` failures into yo
 
 ## Motivation
 
-Many C++ projects are thought to be correct today for out-of-memory (OOM) conditions if a `bad_alloc` exception is thrown. However, because `bad_alloc` is unlike all other exceptions in two ways:
+Many C++ projects are thought to be correct today for out-of-memory (OOM) conditions if a `bad_alloc` exception is thrown. However, `bad_alloc` is unlike all other exceptions in two ways:
 
 1. It is pervasive: It can be encountered/emitted by the majority of functions, and so it generally cannot be tested using normal unit testing methods. Instead, OOM-testing requires techniques like fault injection (hence this library).
 
-2. (Hypothesis) It requires careful handling: It cannot be assumed to be recoverable by running ordinary code, including to perform stack unwinding and call-site error handling, because ordinary code frequently tries to allocate memory. Instead, OOM-hardened code must be written carefully to observe restrictions and special idioms.
+2. (Hypothesis) It requires careful handling: It cannot be assumed to be recoverable by running ordinary code, including to perform stack unwinding and call-site error handling using ordinary exception handling, because ordinary code frequently tries to allocate memory. Instead, OOM-hardened code must be written carefully to observe restrictions and special idioms.
 
 This project exists to help validate or invalidate this hypothesis, and we appreciate your help in gathering current data.
 
