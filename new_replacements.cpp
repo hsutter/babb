@@ -1,7 +1,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2019 Marshall Clow. All rights reserved.
+// Copyright (c) 2019 Herb Sutter and Marshall Clow. All rights reserved.
 //
 // This code is licensed under the MIT License (MIT).
 //
@@ -196,26 +196,3 @@ void operator delete[] (void* ptr, size_t, std::align_val_t alignment) noexcept
 
 #endif // !HAS_ALIGNED_ALLOCATIONS
 
-
-
-//----------------------------------------------------------------------------
-//  Smoke test
-//----------------------------------------------------------------------------
-
-#include <iostream>
-
-int main () {
-	const int N = 1000;
-	int total = 0;
-
-	babb::this_thread.set_failure_profile(10, 10);
-
-	for (int i = 0; i < N; ++i) {
-		try { (void) new int; std::cout << '.'; }
-		catch (const std::bad_alloc &) { std::cout << '!'; ++total; }
-		catch (...) { assert(!"other exception was thrown"); }
-	}
-
-	std::cout << std::endl;
-	std::cout << total << " failures in " << N << " requests (avg. 1 in " << N / total << ")\n";
-}

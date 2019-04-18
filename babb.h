@@ -1,7 +1,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Copyright (c) 2019 Herb Sutter. All rights reserved.
+// Copyright (c) 2019 Herb Sutter and Marshall Clow. All rights reserved.
 //
 // This code is licensed under the MIT License (MIT).
 //
@@ -31,7 +31,7 @@ namespace babb {
 //----------------------------------------------------------------------------
 
 class {
-    int once_per  = 10;      	// avg #allocations between failures
+    int once_per  = 100000;    	// avg #allocations between failures
     int run_length = 5;	        // max #consecutive failures
 
     auto invariant() 
@@ -65,7 +65,7 @@ public:
 //  Per-thread state
 //----------------------------------------------------------------------------
 
-class this_thread_ {   
+thread_local class this_thread_ {
     std::random_device rd;
     std::mt19937_64 mt;
     std::uniform_real_distribution<double> dist;
@@ -149,8 +149,7 @@ public:
         // make this line work, and if they don't then that's useful data too.
         }
     }
-};
-thread_local this_thread_ this_thread;
+} this_thread;
 
 }
 
