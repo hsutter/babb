@@ -20,19 +20,17 @@ This project exists to help validate or invalidate this hypothesis, and we appre
 
 ## How to use this library to test your application
 
-1. Insert a call to `babb::this_thread.inject_random_failure()` inside each of your custom allocation functions that are allowed to fail by throwing `bad_alloc`, including in any such replacement `operator new` and in any custom allocator's `::allocate` function you are using that can fail.
+Insert a call to `babb::this_thread.inject_random_failure()` inside each of your custom allocation functions that are allowed to fail by throwing `bad_alloc`, including in any such replacement `operator new` and in any custom allocator's `::allocate` function you are using that can fail.
 
-2. If your project doesn't already replace global `operator new`, then add `new_replacements.cpp` to your project, which contains replacements for the throwing global `new` functions that add  the above injection calls.
+For convenience, if your project **does not** already replace global `operator new`: You can add `new_replacements.cpp` to your project, which contains replacements for the throwing global `new` functions that add  the above injection calls.
 
-3. Optionally, insert a single call to `babb::shared.set_failure_profile(fail_once_per, max_run_length)` in your `main` function to control the frequency and clustering of failure injection. We suggest trying various values for these options.
+We suggest trying various values for these options:
 
-    - `fail_once_per`: the average #allocation attempts before one fails (default: 100,000)
+   - Globally, you can call `babb::shared.set_failure_profile(fail_once_per, max_run_length)` to control the frequency and clustering of failure injection. This is also used as the default for each new thread's failure frequency and clustering whenever the new thread's `thread_local` storage is created.
 
-    - `max_run_length`: the maximum # consecutive failures in a cluster (default: 5)
+      - `fail_once_per`: the average #allocation attempts before one fails (default: 100,000)
 
-Advanced per-thread options:
-
-   - Each thread's failure frequency defaults to the `shared` values whenever the thread's `thread_local` storage is created, and can be changed at any time by calling `babb::this_thread.set_failure_profile(fail_once_per, max_run_length)` in the target thread.
-
-   - To pause or resume failures on this thread, call `babb::this_thread.pause(true)` to pause, `(false)` to resume. This can be useful to work around calls to OOM-unsafe functions in third-party libraries (though if those are failing that's data too).
+      - `max_run_length`: the maximum # consecutive failures in a cluster (default: 5)
+   
+   - In each thread, you can call `babb::this_thread.set_failure_profile(fail_once_per, max_run_length)` to change these frequencies, or call `babb::this_thread.pause(true)` to pause, or `(false)` to resume, all failure injection on this thread. Pausing can be useful to work around calls to OOM-unsafe functions in third-party libraries (though if those are failing that's data too).
 
