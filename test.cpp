@@ -45,8 +45,7 @@ int main() {
     babb::this_thread.pause(true);
 	while (++i < 700) {
 		try { (void) new int; cout << '.'; }
-		catch (const bad_alloc &) { cout << '!'; ++total; }
-		catch (...) { assert(!"other exception was thrown"); }
+		catch (...) { assert(!"no exception should be thrown, injection is paused"); }
 	}
     }
 	while (++i < N) {
@@ -70,7 +69,7 @@ int main() {
     babb::this_thread.pause(true);
 	while (++i < 700) {
 		if (new (nothrow) int) { cout << '.'; }
-        else { cout << '!'; ++total; };
+        else { assert(!"no exception should be thrown, injection is paused"); };
 	}
     }
 	while (++i < N) {
