@@ -34,12 +34,13 @@ class {
     int once_per  = 100000;    	// avg #allocations between failures
     int run_length = 5;	        // max #consecutive failures
 
-    auto invariant() 
+    // non-auto explicit return type is for portability to pre-C++14 compilers
+    bool invariant() 
         { return once_per > 0 && run_length >= 1; }
 
 public:
-    auto fail_once_per()  { return once_per;   }
-    auto max_run_length() { return run_length; }
+    int fail_once_per()  { return once_per;   }
+    int max_run_length() { return run_length; }
 
     //----------------------------------------------------------------------------
     //
@@ -75,7 +76,7 @@ thread_local class this_thread_ {
     int run_length = shared.max_run_length();   // max #consecutive failures
     bool paused = false;
 
-    auto invariant() { return once_per > 0 && run_length > 0; }
+    bool invariant() { return once_per > 0 && run_length > 0; }
 
 public:
     this_thread_() : mt(rd()), dist(0., 1.) { assert(invariant()); }
@@ -119,12 +120,13 @@ public:
     //	inject_random_failure()
     //
     //  Put a call to this function inside each of your custom allocation functions
-    //  that could throw bad_alloc, including in any replacement operator new and
-    //  in any custom allocator's ::allocate function you are using that can fail.
+    //  that could throw an allocation exception, including any custom non-nothrow
+    //  operator new and any custom allocator's allocate function that can fail by
+    //  throwing.
     //
     //----------------------------------------------------------------------------
 
-    void inject_random_failure() {
+    bool should_inject_random_failure() {
         assert(invariant());
 
         if (paused) return;
@@ -139,7 +141,28 @@ public:
 
         if (run_in_progress > 0) { 
             --run_in_progress; 
-            throw std::bad_alloc();
+            return true;
+        }
+        else
+            return false;        
+    }
+
+
+    //----------------------------------------------------------------------------
+    //
+    //	inject_random_failure()
+    //
+    //  Put a call to this function inside each of your custom allocation functions
+    //  that could throw an allocation exception, including any custom non-nothrow
+    //  operator new and any custom allocator's allocate function that can fail by
+    //  throwing.
+    //
+    //----------------------------------------------------------------------------
+
+    template<class E = std::bad_alloc>
+    void inject_random_failure() {
+        if (should_inject_random_failure())
+            throw E();
         // NOTE: We don't have to take care here to ensure that this doesn't allocate
         // normal memory, because the implementation is already required to be robust
         // so that "throw bad_alloc()" works in low-memory situations. Typically that

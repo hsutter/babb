@@ -2,7 +2,7 @@
 
 ## Overview
 
-This library provides a simple way to inject random `bad_alloc` failures into your application, so that you and the C++ standards committee can learn more about how well real-world code actually deals with `bad_alloc` today.
+This library provides a simple way to inject random `bad_alloc` failures into your application, so that you and the C++ standards committee can learn more about how well real-world code actually deals with `bad_alloc` today. It works on C++11 and higher.
 
 **Please try this in your project(s) and report the results via [this SurveyMonkey survey](https://www.surveymonkey.com/r/PJSZ2F9).** Thank you very much for your help in getting data to inform C++ standardization!
 
@@ -20,9 +20,23 @@ This project exists to help validate or invalidate this hypothesis, and we appre
 
 ## How to use this library to test your application
 
-Insert a call to `babb::this_thread.inject_random_failure()` inside each of your custom allocation functions that are allowed to fail by throwing `bad_alloc`, including in any such replacement `operator new` and in any custom allocator's `::allocate` function you are using that can fail.
+### To install failure injection
 
-For convenience, if your project **does not** already replace global `operator new`: You can add `new_replacements.cpp` to your project, which contains replacements for the throwing global `new` functions that add  the above injection calls.
+For each of your custom allocation functions, including in any of your replacement `operator new` function and in any custom allocator's `::allocate` function:
+
+- If the function signals allocation failure by throwing `bad_alloc`, insert a call to `babb::this_thread.inject_random_failure()`.
+
+- If the function signals allocation failure by throwing some other exception type `CustomOOMType`, insert a call to `babb::this_thread.inject_random_failure<CustomOOMType>()`.
+
+- If the function signals allocation failure by returning null, insert: `if (babb::this_thread.should_inject_random_failure()) return nullptr;`
+
+
+### Convenience helper file for global installation
+
+For convenience, if your project **does not** already replace global `operator new`: You can add `new_replacements.cpp` to your project, which contains replacements for the user-replaceable global `new` functions that add the above injection calls the standard global operators, including those that throw `bad_alloc` and those that return `nullptr`.
+
+
+### Options
 
 We suggest trying various values for these options:
 

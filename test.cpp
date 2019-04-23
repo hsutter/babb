@@ -26,12 +26,13 @@ using namespace std;
 #include "babb.h"
 using namespace babb;
 
-int main () {
+int main() {
 	const int N = 1000;
 	int total = 0;
 
 	this_thread.set_failure_profile(10, 10);
 
+	cout << "===== Testing bad_alloc:\n";
 	for (int i = 0; i < N; ++i) {
 		try { (void) new int; cout << '.'; }
 		catch (const bad_alloc &) { cout << '!'; ++total; }
@@ -39,5 +40,15 @@ int main () {
 	}
 
 	cout << "\nSummary: " << total << " failures in "
-         << N << " requests (avg. 1 per " << N / total << ")\n";
+		<< N << " requests (avg. 1 per " << N / total << ")\n\n";
+
+	cout << "===== Testing nothrow/nullptr:\n";
+    total = 0;
+    for (int i = 0; i < N; ++i) {
+		if (new (nothrow) int) { cout << '.'; }
+        else { cout << '!'; ++total; };
+	}
+
+	cout << "\nSummary: " << total << " failures in "
+		<< N << " requests (avg. 1 per " << N / total << ")\n";
 }
