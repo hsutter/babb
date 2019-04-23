@@ -66,7 +66,7 @@ public:
 //  Per-thread state
 //----------------------------------------------------------------------------
 
-thread_local class this_thread_ {
+class this_thread_ {
     std::random_device rd;
     std::mt19937_64 mt;
     std::uniform_real_distribution<double> dist;
@@ -117,19 +117,16 @@ public:
 
     //----------------------------------------------------------------------------
     //
-    //	inject_random_failure()
+    //	should_inject_random_failure()
     //
-    //  Put a call to this function inside each of your custom allocation functions
-    //  that could throw an allocation exception, including any custom non-nothrow
-    //  operator new and any custom allocator's allocate function that can fail by
-    //  throwing.
+    //  Returns true if it's time to inject a failure in this thread.
     //
     //----------------------------------------------------------------------------
 
     bool should_inject_random_failure() {
         assert(invariant());
 
-        if (paused) return;
+        if (paused) return false;
 
         auto trigger_a_new_run =
             [&]{ return dist(mt) < 1./once_per/(run_length/2.); };
@@ -172,7 +169,8 @@ public:
         // make this line work, and if they don't then that's useful data too.
         }
     }
-} this_thread;
+};
+thread_local this_thread_ this_thread;
 
 }
 
