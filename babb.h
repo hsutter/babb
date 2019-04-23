@@ -27,65 +27,29 @@
 namespace babb {
 
 //----------------------------------------------------------------------------
-//  Global state
+//  State values to control failure frequency and status
+//  We'll keep a global state, and a per-thread state
 //----------------------------------------------------------------------------
 
-class {
+class state {
+protected:
     int once_per  = 100000;    	// avg #allocations between failures
     int run_length = 5;	        // max #consecutive failures
+    bool paused = false;        // is failure injection currently paused
 
     // non-auto explicit return type is for portability to pre-C++14 compilers
     bool invariant() 
-        { return once_per > 0 && run_length >= 1; }
+        { return once_per > 0 && run_length > 0; }
 
 public:
-    int fail_once_per()  { return once_per;   }
-    int max_run_length() { return run_length; }
-
     //----------------------------------------------------------------------------
     //
-    //	set_failure_profile: Set a default failure injection profile
+    //	set_failure_profile: Change current failure injection profile
     //
-    //	Optionally put one call to this in your main().
-    //  If you don't, the default is as if init(100000, 5).
-    //
-    //  fail_once_per:  avg #allocations between failures
-    //  max_run_length: max #consecutive failures (once we have triggered a new one)
-    //
-    //----------------------------------------------------------------------------
-
-    void set_failure_profile(int fail_once_per, int max_run_length) {
-        once_per = fail_once_per;
-        run_length = max_run_length;
-        assert(invariant());
-    }
-} shared;
-
-
-//----------------------------------------------------------------------------
-//  Per-thread state
-//----------------------------------------------------------------------------
-
-class this_thread_ {
-    std::random_device rd;
-    std::mt19937_64 mt;
-    std::uniform_real_distribution<double> dist;
-    int run_in_progress = 0;
-
-    int once_per  = shared.fail_once_per(); 	// avg #allocations between failures
-    int run_length = shared.max_run_length();   // max #consecutive failures
-    bool paused = false;
-
-    bool invariant() { return once_per > 0 && run_length > 0; }
-
-public:
-    this_thread_() : mt(rd()), dist(0., 1.) { assert(invariant()); }
-
-    //----------------------------------------------------------------------------
-    //
-    //	set_failure_profile: Change this thread's failure injection profile
-    //
-    //	The default is to use the default frequency.
+    //	Call:
+    //      shared.set_failure_profile to set the current global defaults
+    //      this_thread.set_failure_profile to set this thread's current values
+    //  Each thread initially defaults to the shared values.
     //
     //  fail_once_per:  avg #allocations between failures
     //  max_run_length: max #consecutive failures (once we have triggered a new one)
@@ -103,8 +67,8 @@ public:
     //
     //	pause: Pause or unpause fault injection on this thread.
     //
-    //	This can be useful to work around calls to OOM-unsafe functions in
-    //  third-party libraries (though if those are failing that's data too).
+    //	This can be useful to work around individual calls to OOM-unsafe functions
+    //  in third-party libraries (though if those are failing that's data too).
     //
     //  paused:  true to pause, false to resume
     //
@@ -113,6 +77,44 @@ public:
     void pause(bool paused) {
         this->paused = paused;
     }
+};
+
+//----------------------------------------------------------------------------
+//
+//	Helper RAII type to save/restore current settings
+//
+//	This can be useful to work around entire third-party libraries that are
+//  OOM-unsafe (though if those are failing that's data too).
+//
+//----------------------------------------------------------------------------
+class state_guard {
+    state& original;
+    state saved;
+public:
+    state_guard(state& s) : original(s), saved(s) { }
+    ~state_guard() { original = saved; }
+};
+
+
+//----------------------------------------------------------------------------
+//  Global state (used for thread defaults)
+//----------------------------------------------------------------------------
+
+state shared;
+
+
+//----------------------------------------------------------------------------
+//  Per-thread state
+//----------------------------------------------------------------------------
+
+class this_thread_ : public state {
+    std::random_device rd;
+    std::mt19937_64 mt;
+    std::uniform_real_distribution<double> dist;
+    int run_in_progress = 0;
+
+public:
+    this_thread_() : state(shared), mt(rd()), dist(0., 1.) { }
 
 
     //----------------------------------------------------------------------------
@@ -167,7 +169,6 @@ public:
         // memory; otherwise, if "new int" fails an ordinary "new bad_alloc" to throw
         // the exception will also immediately fail. So it's up to implementations to
         // make this line work, and if they don't then that's useful data too.
-        }
     }
 };
 thread_local this_thread_ this_thread;

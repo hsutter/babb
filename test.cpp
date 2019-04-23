@@ -24,16 +24,32 @@
 using namespace std;
 
 #include "babb.h"
-using namespace babb;
 
 int main() {
-	const int N = 1000;
+	constexpr int N = 1000;
+	static_assert(N > 800, "test assumes at least 800 allocation attempts");
+
 	int total = 0;
 
-	this_thread.set_failure_profile(10, 10);
+	babb::this_thread.set_failure_profile(10, 10);
 
 	cout << "===== Testing bad_alloc:\n";
-	for (int i = 0; i < N; ++i) {
+    int i = 0;
+	while (++i < 200) {
+		try { (void) new int; cout << '.'; }
+		catch (const bad_alloc &) { cout << '!'; ++total; }
+		catch (...) { assert(!"other exception was thrown"); }
+	}
+	{ // there should be a gap of no failures from 200 to 700
+    babb::state_guard save(babb::this_thread);
+    babb::this_thread.pause(true);
+	while (++i < 700) {
+		try { (void) new int; cout << '.'; }
+		catch (const bad_alloc &) { cout << '!'; ++total; }
+		catch (...) { assert(!"other exception was thrown"); }
+	}
+    }
+	while (++i < N) {
 		try { (void) new int; cout << '.'; }
 		catch (const bad_alloc &) { cout << '!'; ++total; }
 		catch (...) { assert(!"other exception was thrown"); }
@@ -44,7 +60,20 @@ int main() {
 
 	cout << "===== Testing nothrow/nullptr:\n";
     total = 0;
-    for (int i = 0; i < N; ++i) {
+    i = 0;
+	while (++i < 200) {
+		if (new (nothrow) int) { cout << '.'; }
+        else { cout << '!'; ++total; };
+	}
+	{ // there should be a gap of no failures from 200 to 700
+    babb::state_guard save(babb::this_thread);
+    babb::this_thread.pause(true);
+	while (++i < 700) {
+		if (new (nothrow) int) { cout << '.'; }
+        else { cout << '!'; ++total; };
+	}
+    }
+	while (++i < N) {
 		if (new (nothrow) int) { cout << '.'; }
         else { cout << '!'; ++total; };
 	}
