@@ -31,7 +31,7 @@ For each of your custom allocation functions, including in any of your replaceme
 - If the function signals allocation failure by returning null, insert: `if (babb::this_thread.should_inject_random_failure()) return nullptr;`
 
 
-### Convenience helper file for global installation
+### Convenience helper file (if you don't already replace global `operator new`)
 
 For convenience, if your project **does not** already replace global `operator new`, you can add `new_replacements.cpp` to your project. It contains replacements for the user-replaceable global `new` functions that add the above injection calls the standard global operators, including those that throw `bad_alloc` and those that return `nullptr`.
 
