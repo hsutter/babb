@@ -22,7 +22,6 @@
 #include <memory>
 #include <random>
 #include <cassert>
-#include <iostream>
 
 namespace babb {
 
