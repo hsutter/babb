@@ -37,7 +37,7 @@ protected:
     bool paused = false;        // is failure injection currently paused
 
     // non-auto explicit return type is for portability to pre-C++14 compilers
-    bool invariant() 
+    bool invariant() noexcept
         { return once_per > 0 && run_length > 0; }
 
 public:
@@ -55,7 +55,7 @@ public:
     //
     //----------------------------------------------------------------------------
 
-    void set_failure_profile(int fail_once_per, int max_run_length) {
+    void set_failure_profile(int fail_once_per, int max_run_length) noexcept {
         once_per = fail_once_per;
         run_length = max_run_length;
         assert(invariant());
@@ -73,7 +73,7 @@ public:
     //
     //----------------------------------------------------------------------------
 
-    void pause(bool on) {
+    void pause(bool on) noexcept {
         paused = on;
     }
 };
@@ -90,8 +90,8 @@ class state_guard {
     state& original;
     state saved;
 public:
-    state_guard(state& s) : original(s), saved(s) { }
-    ~state_guard() { original = saved; }
+    state_guard(state& s) noexcept : original(s), saved(s) { }
+    ~state_guard() noexcept { original = saved; }
 };
 
 
@@ -107,14 +107,26 @@ state shared;
 //----------------------------------------------------------------------------
 
 class this_thread_ : public state {
-    std::random_device rd;
-    std::mt19937_64 mt;
-    std::uniform_real_distribution<double> dist;
+    // We'll wrap <random> for convenience, and to make getting a random
+    // number noexcept which is not currently guaranteed in the standard.
+    class prng {
+        std::random_device rd;
+        std::mt19937_64 mt;
+        std::uniform_real_distribution<double> dist;
+    public:
+        prng() : mt(rd()), dist(0., 1.) { }
+
+        double operator()() noexcept
+            try { return dist(mt); } // this shouldn't throw, but isn't specified to be noexcept
+            catch(...) { assert(!"std::<random> operator() threw"); return 0.; }
+    };
+
+    prng random;
     int run_in_progress = 0;
 
 public:
-    this_thread_() : state(shared), mt(rd()), dist(0., 1.) { }
-
+    this_thread_() : state(shared) { }
+    
 
     //----------------------------------------------------------------------------
     //
@@ -124,16 +136,16 @@ public:
     //
     //----------------------------------------------------------------------------
 
-    bool should_inject_random_failure() {
+    bool should_inject_random_failure() noexcept {
         assert(invariant());
 
         if (paused) return false;
 
         auto trigger_a_new_run =
-            [&]{ return dist(mt) < 1./once_per/(run_length/2.); };
+            [&]{ return random() < 1./once_per/(run_length/2.); };
 
         if (run_in_progress == 0 && trigger_a_new_run()) {
-            run_in_progress = 1 + int(dist(mt)*(run_length-1));
+            run_in_progress = 1 + int(random()*(run_length-1));
             assert(invariant() && run_in_progress > 0);
         }
 
@@ -158,7 +170,7 @@ public:
     //----------------------------------------------------------------------------
 
     template<class E = std::bad_alloc>
-    void inject_random_failure() {
+    void inject_random_failure() noexcept(false) {
         if (should_inject_random_failure())
             throw E();
         // NOTE: We don't have to take care here to ensure that this doesn't allocate
