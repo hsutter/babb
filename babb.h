@@ -69,12 +69,12 @@ public:
     //	This can be useful to work around individual calls to OOM-unsafe functions
     //  in third-party libraries (though if those are failing that's data too).
     //
-    //  paused:  true to pause, false to resume
+    //  on:  true to pause, false to resume
     //
     //----------------------------------------------------------------------------
 
-    void pause(bool paused) {
-        this->paused = paused;
+    void pause(bool on) {
+        paused = on;
     }
 };
 
