@@ -40,7 +40,7 @@ For convenience, if your project **does not** already replace global `operator n
 
 We suggest trying various values for these options:
 
-   - Globally, you can call `babb::shared.set_failure_profile(fail_once_per, max_run_length)` to control the frequency and clustering of failure injection. This is also used as the default for each new thread's failure frequency and clustering whenever the new thread's `thread_local` storage is created.
+   - Globally, you can call `babb::shared.set_failure_profile(fail_once_per, max_run_length)` to control the frequency and clustering of failure injection. This is also used as the default for each new thread.
 
       - `fail_once_per`: the average #allocation attempts before one fails (default: 100,000)
 
@@ -49,4 +49,4 @@ We suggest trying various values for these options:
    - In each thread, you can call `babb::this_thread.set_failure_profile(fail_once_per, max_run_length)` to change these frequencies, or call `babb::this_thread.pause(true)` to pause, or `(false)` to resume, all failure injection on this thread. Pausing can be useful to work around calls to allocation failure-unsafe functions in third-party libraries (though if those are failing that's data too).
 
    - For either `babb::shared` or `babb::this_thread`, you can use the RAII helper `babb::state_guard` to push/pop changes to the state. For example, you can create a local object using `babb::state_guard save(babb::this_thread);` and then make other changes, including pausing and nested state guards, and when the guard object is destroyed it will restore the original state as it was when the guard was created.
-   This can be useful to suppress failure injection within a particular module (e.g., third-party or shared library) by wrapping all the library's entry points in a scope guard and then pausing failure injection. Because the scope guards nest, this will be correct even if the module's entry point functions happen to invoke each other directly and so create nested guards.
+   This can be useful to suppress failure injection within a particular module (e.g., third-party or shared library) by wrapping all the library's entry points in a scope guard and then pausing failure injection. Because the scope guards can nest, this will be correct even if the module's entry point functions happen to invoke each other directly and so create nested guards.
