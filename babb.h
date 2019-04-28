@@ -20,6 +20,7 @@
 #define BABB_BABB_H
 
 #include <memory>
+#include <limits>
 #include <random>
 #include <cassert>
 
@@ -107,18 +108,13 @@ state shared;
 //----------------------------------------------------------------------------
 
 class this_thread_ : public state {
-    // We'll wrap <random> for convenience, and to make getting a random
-    // number noexcept which is not currently guaranteed in the standard.
     class prng {
-        std::random_device rd;
-        std::mt19937_64 mt;
-        std::uniform_real_distribution<double> dist;
+        std::minstd_rand r;
     public:
-        prng() : mt(rd()), dist(0., 1.) { }
+        prng() : r((int) this) { }
 
         double operator()() noexcept
-            try { return dist(mt); } // this shouldn't throw, but isn't specified to be noexcept
-            catch(...) { assert(!"std::<random> operator() threw"); return 0.; }
+            { return 1.*r()/std::numeric_limits<std::uint_fast32_t>::max(); }
     };
 
     prng random;
@@ -170,7 +166,7 @@ public:
     //----------------------------------------------------------------------------
 
     template<class E = std::bad_alloc>
-    void inject_random_failure() noexcept(false) {
+    void inject_random_failure() {
         if (should_inject_random_failure())
             throw E();
         // NOTE: We don't have to take care here to ensure that this doesn't allocate
