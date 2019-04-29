@@ -109,8 +109,11 @@ state shared;
 
 class this_thread_ : public state {
     class prng {
-        std::mt19937_64 r;
-        using rtype = std::mt19937_64::result_type;
+        // minstd_rand is sufficient and uses 1 word of storage
+        // mt19937_64 is generally better but is overkill here, it uses 600+
+        //   words and we want this to be usable in constrained environments 
+        std::minstd_rand r;
+        using rtype = decltype(r)::result_type;
     public:
         prng() noexcept : r(reinterpret_cast<rtype>(this)) { }
 
