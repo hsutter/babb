@@ -109,12 +109,13 @@ state shared;
 
 class this_thread_ : public state {
     class prng {
-        std::minstd_rand r;
+        std::mt19937_64 r;
+        using rtype = std::mt19937_64::result_type;
     public:
-        prng() : r((int) this) { }
+        prng() noexcept : r(reinterpret_cast<rtype>(this)) { }
 
         double operator()() noexcept
-            { return 1.*r()/std::numeric_limits<std::uint_fast32_t>::max(); }
+            { return 1.*r() / std::numeric_limits<rtype>::max(); }
     };
 
     prng random;
