@@ -25,7 +25,7 @@ using namespace std;
 
 #include "babb.h"
 
-int main() {
+void smoke_test() {
 	constexpr int N = 1000;
 	static_assert(N > 800, "test assumes at least 800 allocation attempts");
 
@@ -79,4 +79,9 @@ int main() {
 
 	cout << "\nSummary: " << total << " failures in "
 		<< N << " requests (avg. 1 per " << N / total << ")\n";
+}
+
+
+int main() { 
+	smoke_test();
 }

@@ -115,7 +115,7 @@ class this_thread_ : public state {
         std::minstd_rand r;
         using rtype = decltype(r)::result_type;
     public:
-        prng() noexcept : r(reinterpret_cast<rtype>(this)) { }
+        prng() noexcept : r((rtype)reinterpret_cast<std::size_t>(this)) { }
 
         double operator()() noexcept
             { return 1.*r() / std::numeric_limits<rtype>::max(); }
