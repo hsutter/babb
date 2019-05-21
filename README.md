@@ -50,3 +50,17 @@ We suggest trying various values for these options:
 
    - For either `babb::shared` or `babb::this_thread`, you can use the RAII helper `babb::state_guard` to push/pop changes to the state. For example, you can create a local object using `babb::state_guard save(babb::this_thread);` and then make other changes, including pausing and nested state guards, and when the guard object is destroyed it will restore the original state as it was when the guard was created.
    This can be useful to suppress failure injection within a particular module (e.g., third-party or shared library) by wrapping all the library's entry points in a scope guard and then pausing failure injection. Because the scope guards can nest, this will be correct even if the module's entry point functions happen to invoke each other directly and so create nested guards.
+
+### To test only specific code paths
+
+Some applications are a mix of code paths that are believed to be OOM-hardened, and others that already known not to be and so shouldn't be tested. In such applications, to test only the "we think they are hardened" code paths, the simplest thing to do is change `false` to `true` in this one line of `babb.h`:
+
+    bool paused = false;        // <-- change this to "= true" to start with failure injection paused
+
+and then at the start of each scoped computation you think is OOM-safe add this to opt into failure injection:
+
+    babb::state_guard x(babb::this_thread);
+    babb::this_thread.set_failure_profile(X, 5);  // try various values of X
+    babb::this_thread.pause(false);
+
+which will enable failure injection for the current scope that contains the `state_guard`, and then automatically suspend failure injection again when we leave this scope.
