@@ -4,7 +4,7 @@
 
 This library provides a simple way to inject random memory allocation failures into your application, so that you and the C++ standards committee can learn more about how well real-world code actually deals with allocation failure today. This library requires C++11 or higher.
 
-**Please try this in your project(s) and report the results via [this SurveyMonkey survey](https://www.surveymonkey.com/r/PJSZ2F9).** Thank you very much for your help in getting data to inform C++ standardization!
+**Please try this in your project(s) and report the results via [this SurveyMonkey survey](https://www.surveymonkey.com/r/5P66BLS).** Thank you very much for your help in getting data to inform C++ standardization!
 
 
 ## Motivation
